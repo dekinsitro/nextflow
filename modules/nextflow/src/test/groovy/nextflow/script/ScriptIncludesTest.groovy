@@ -18,7 +18,6 @@ package nextflow.script
 
 import java.nio.file.Files
 
-import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.NextflowMeta
 import nextflow.exception.DuplicateModuleIncludeException
 import spock.lang.Specification
@@ -121,7 +120,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result[0].val == 'HELLO MUNDO'
         binding.variables.alpha == null
     }
 
@@ -168,7 +167,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result[0].val == 'HELLO MUNDO'
         !binding.hasVariable('alpha')
         !binding.hasVariable('foo')
         !binding.hasVariable('bar')
@@ -213,7 +212,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result[0].val == 'HELLO MUNDO'
     }
 
     def 'should gather process outputs' () {
@@ -255,7 +254,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result[0].val == 'HELLO MUNDO'
         !vars.containsKey('data')
         !vars.containsKey('foo')
         !vars.containsKey('bar')
@@ -290,8 +289,8 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
-        result.val == 'echo Hello world'
+        result instanceof ChannelArrayList
+        result[0].val == 'echo Hello world'
 
         cleanup:
         folder?.deleteDir()
@@ -330,8 +329,8 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
-        result.val == 'echo sample=world pairId=x reads=/some/file'
+        result instanceof ChannelArrayList
+        result[0].val == 'echo sample=world pairId=x reads=/some/file'
     }
 
 
@@ -378,8 +377,8 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
-        result.val == 'echo Ciao world'
+        result instanceof ChannelArrayList
+        result[0].val == 'echo Ciao world'
 
 
         when:
@@ -431,8 +430,8 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
-        result.val == 'echo Hello world'
+        result instanceof ChannelArrayList
+        result[0].val == 'echo Hello world'
         
     }
 
@@ -498,7 +497,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result.val == 'echo Hola mundo'
+        result[0].val == 'echo Hola mundo'
     }
 
     def 'should not fail when invoking a process in a module' () {

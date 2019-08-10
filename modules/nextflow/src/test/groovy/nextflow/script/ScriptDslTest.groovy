@@ -46,7 +46,7 @@ class ScriptDslTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result[0].val == 'HELLO MUNDO'
     }
 
 

@@ -12,6 +12,8 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.dag.NodeMarker
+import nextflow.exception.ScriptRuntimeException
+import nextflow.script.ChannelArrayList
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Represents an nextflow operation invocation
@@ -47,9 +49,9 @@ class OpCall implements Callable {
         assert owner
         assert method
         this.owner = owner
-        this.source = source
         this.methodName = method
         this.args = args
+        this.setSource(source)
     }
 
     OpCall(String method, Object[] args ) {
@@ -57,6 +59,30 @@ class OpCall implements Callable {
         this.owner = OperatorEx.instance
         this.methodName = method
         this.args = args
+    }
+
+    OpCall setSource(ChannelArrayList left) {
+        if( left.size()==1 ) {
+            this.source = left[0] as DataflowWriteChannel
+            return this
+        }
+
+        if( args.size() )
+            throw new ScriptRuntimeException("Multi-channel output cannot be applied to operator ${methodName} for which argument is already provided")
+
+        source = left[0] as DataflowWriteChannel
+        args = left[1..-1] as Object[]
+        return this
+    }
+
+    OpCall setSource( obj ) {
+        if( obj instanceof ChannelArrayList )
+            return setSource(obj)
+        else if( obj instanceof DataflowWriteChannel)
+            return setSource(obj)
+        else
+            source = obj
+        return this
     }
 
     OpCall setSource(DataflowWriteChannel channel) {

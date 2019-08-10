@@ -73,7 +73,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'DLROW ALOH'
+        result[0].val == 'DLROW ALOH'
     }
 
     def 'should pipe multi-outputs with multi-inputs' () {
@@ -112,7 +112,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'olleh + HELLO'
+        result[0].val == 'olleh + HELLO'
     }
 
     def 'should pipe process with operator' () {
@@ -159,7 +159,9 @@ class ScriptPipesTest extends Specification {
             X = "hola"
         }     
         
-        foo | map { it.reverse() }
+        workflow {
+            foo | map { it.reverse() }
+        }
         '''
 
         when:
@@ -197,7 +199,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HOLA'
+        result[0].val == 'HOLA'
     }
 
 

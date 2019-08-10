@@ -61,7 +61,8 @@ The new DSL separates the definition of a process by its invocation. The process
 for syntax as described in the :ref:`process documentation <process-page>`. The only difference is that the
 ``from`` and ``into`` channel declaration has to be omitted.
 
-Then processes can be invoked as a function, passing the expected input channels as parameters.
+Then processes can be invoked as a function in the ``workflow`` scope, passing the expected
+input channels as parameters.
 
 For example::
 
@@ -87,13 +88,12 @@ For example::
           """
     }
 
-    data = Channel.fromPath('/some/path/*.txt')
-    foo()
-    bar(data)
+    workflow {
+        data = Channel.fromPath('/some/path/*.txt')
+        foo()
+        bar(data)
+    }
 
-
-Process invocation
-------------------
 
 
 Process composition
@@ -103,59 +103,63 @@ Processes having matching input-output declaration can be composed so that the o
 of the first process is passed as input to the following process. Take in consideration
 the previous process definition, it's possible to write the following::
 
-    bar(foo())
+    workflow {
+        bar(foo())
+    }
 
 Process outputs
 ---------------
 
-A process output can also be accessed using the ``output`` attribute for the respective
+A process output can also be accessed using the ``out`` attribute for the respective
 process object. For example::
 
-    foo()
-    bar( foo.output )
-    bar.output.println()
+    workflow {
+        foo()
+        bar( foo.out )
+        bar.out.println()
+    }
 
 
 When a process defines two or more output channels, each of them can be accessed
-using the array element operator e.g. ``output[0]``, etc or using the ``first``, ``second``, etc
-sub-properties e.g. ``output.first``.
+using the array element operator e.g. ``out[0]``, etc or using the ``first``, ``second``, etc
+sub-properties e.g. ``out.first``.
 
-.. Workflow
-.. ========
-..
-.. Workflow definition
-.. --------------------
-..
-.. The ``workflow`` keyword allows the definition of sub-workflow components that enclose the
-.. invocation of two or more processes or operators. For example::
-..
-..     workflow my_pipeline {
-..         foo()
-..         bar( foo.output.collect() )
-..     }
-..
-..
-.. Once defined it can be invoked from another (sub) workflow component definition.
-..
-.. Workflow parameters
-.. -------------------
-..
-.. A workflow component can be define one or more parameter in a similar manner as for a function
-.. definition. For example::
-..
-..         workflow my_pipeline( data )  {
-..             foo()
-..             bar( data.mix( foo.output ) )
-..         }
-..
-.. The result channel of the last evaluated process is implicitly returned as the workflow output.
-..
-..
-.. Main workflow
-.. -------------
-..
-.. A workflow definition which does not define any name is assumed to be the main workflow and it's
-.. implicitly executed. Therefore it's the entry point of the workflow application.
+Workflow
+========
+
+Workflow definition
+--------------------
+
+The ``workflow`` keyword allows the definition of sub-workflow components that enclose the
+invocation of two or more processes or operators. For example::
+
+    workflow my_pipeline {
+        foo()
+        bar( foo.out.collect() )
+    }
+
+
+Once defined it can be invoked from another (sub) workflow component definition.
+
+Workflow parameters
+-------------------
+
+A workflow component can be define one or more parameter in a similar manner as for a function
+definition. For example::
+
+        workflow my_pipeline( data )  {
+            foo()
+            bar( data.mix( foo.out ) )
+        }
+
+The result channel of the last evaluated process is implicitly returned as the workflow output.
+
+
+Main workflow
+-------------
+
+A workflow definition which does not define any name is assumed to be the main workflow and it's
+implicitly executed. Therefore it's the entry point of the workflow application.
 
 Modules
 =======
@@ -178,8 +182,11 @@ For example::
     nextflow.preview.dsl=2
     include 'modules/libx'
 
-    data = Channel.fromPath('/some/data/*.txt')
-    my_pipeline(data)
+    workflow {
+        data = Channel.fromPath('/some/data/*.txt')
+        my_pipeline(data)
+    }
+
 
 Nextflow implicitly looks for the module script ``modules/libx.nf`` resolving the path
 against the main script location.
@@ -194,8 +201,11 @@ inclusion extended syntax as shown below::
     nextflow.preview.dsl=2
     include my_pipeline from 'modules/libx'
 
-    data = Channel.fromPath('/some/data/*.txt')
-    my_pipeline(data)
+    workflow {
+        data = Channel.fromPath('/some/data/*.txt')
+        my_pipeline(data)
+    }
+
 
 The module component can be included using a name alias as shown below::
 
@@ -203,8 +213,10 @@ The module component can be included using a name alias as shown below::
     nextflow.preview.dsl=2
     include my_pipeline as my_tool from 'modules/libx'
 
-    data = Channel.fromPath('/some/data/*.txt')
-    my_tool(data)
+    workflow {
+        data = Channel.fromPath('/some/data/*.txt')
+        my_tool(data)
+    }
 
 Module aliases
 --------------
@@ -218,8 +230,10 @@ in your script using different names. For example::
     include foo from 'modules/my-library'
     include for as bar from 'modules/my-library'
 
-    foo(some_data)
-    bar(other_data)
+    workflow {
+        foo(some_data)
+        bar(other_data)
+    }
 
 
 Module parameters
@@ -264,7 +278,10 @@ Nextflow processes and operators can be composed using the ``|`` *pipe* operator
             result = "$data mundo"
       }
 
-      Channel.from('Hello','world') | foo
+      workflow {
+          Channel.from('Hello','world') | foo
+      }
+
 
 
 The above snippet defines a process named ``foo`` then invoke it passing the content of the
@@ -287,8 +304,10 @@ channel e.g.::
           result = data.toUpperCase()
     }
 
+    workflow {
+      Channel.from('Hello') | map { it.reverse() } | (foo & bar)
+    }
 
-    Channel.from('Hello') | map { it.reverse() } | (foo & bar)
 
 
 Deprecated methods and operators

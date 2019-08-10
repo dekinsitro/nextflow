@@ -112,7 +112,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     @Deprecated
     def getOutput() {
-        log.warn "Property output has been deprecated use `${name}.out` instead"
+        log.warn "Property `output` has been deprecated use `${name}.out` instead"
         output
     }
 
@@ -175,9 +175,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
         final result = declaredOutputs.getChannels()
         assert result.size()>0, "Process output should contains at least one channel"
 
-        return output = (result.size()==1
-                ? output=result[0]
-                : new ChannelArrayList(result))
+        return output = new ChannelArrayList(result)
     }
 
 }
