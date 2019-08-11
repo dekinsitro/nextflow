@@ -61,7 +61,7 @@ class ProcessFactory {
      * @param taskBody The process task body
      * @return An instance of {@link nextflow.processor.TaskProcessor}
      */
-    protected TaskProcessor newTaskProcessor(String name, Executor executor, ProcessConfig config, TaskBody taskBody ) {
+    protected TaskProcessor newTaskProcessor(String name, Executor executor, ProcessConfig config, BodyDef taskBody ) {
         new TaskProcessor(name, executor, session, owner, config, taskBody)
     }
 
@@ -106,7 +106,7 @@ class ProcessFactory {
         final copy = (Closure)body.clone()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(processConfig)
-        final script = copy.call() as TaskBody
+        final script = copy.call() as BodyDef
         processConfig.throwExceptionOnMissingProperty(false)
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")

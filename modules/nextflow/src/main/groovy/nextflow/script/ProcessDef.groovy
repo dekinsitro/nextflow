@@ -45,7 +45,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     private ProcessConfig processConfig
 
-    private TaskBody taskBody
+    private BodyDef taskBody
 
     private Closure rawBody
 
@@ -58,7 +58,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
     }
 
     @Deprecated
-    ProcessDef(BaseScript owner, String name, ProcessConfig config, TaskBody body) {
+    ProcessDef(BaseScript owner, String name, ProcessConfig config, BodyDef body) {
         this.owner = owner
         this.name = name
         this.taskBody = body
@@ -77,7 +77,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
         final copy = (Closure)rawBody.clone()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(processConfig)
-        taskBody = copy.call() as TaskBody
+        taskBody = copy.call() as BodyDef
         processConfig.throwExceptionOnMissingProperty(false)
         if ( !taskBody )
             throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")

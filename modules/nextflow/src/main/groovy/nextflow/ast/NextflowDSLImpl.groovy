@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.script.BaseScript
 import nextflow.script.IncludeDef
-import nextflow.script.TaskBody
+import nextflow.script.BodyDef
 import nextflow.script.TaskClosure
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
@@ -630,13 +630,13 @@ class NextflowDSLImpl implements ASTTransformation {
 
         }
         /**
-         * Wrap the user provided piece of code, either a script or a closure with a {@code TaskBody} object
+         * Wrap the user provided piece of code, either a script or a closure with a {@code BodyDef} object
          *
          * @param closure
          * @param source
          * @param scriptOrNative
          * @param unit
-         * @return a {@code TaskBody} object
+         * @return a {@code BodyDef} object
          */
         private Expression makeScriptWrapper( ClosureExpression closure, CharSequence source, String section, SourceUnit unit ) {
 
@@ -653,8 +653,8 @@ class NextflowDSLImpl implements ASTTransformation {
                 newArgs << newObj( TokenValRef, pName, pLine, pCol )
             }
 
-            // invokes the TaskBody constructor
-            newObj( TaskBody, newArgs as Object[] )
+            // invokes the BodyDef constructor
+            newObj( BodyDef, newArgs as Object[] )
         }
 
         /**
@@ -1081,7 +1081,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 closureExp.variableScope = new VariableScope(block.variableScope)
 
                 // append to the list of statement
-                //def wrap = newObj(TaskBody, closureExp, new ConstantExpression(source.toString()), ConstantExpression.TRUE)
+                //def wrap = newObj(BodyDef, closureExp, new ConstantExpression(source.toString()), ConstantExpression.TRUE)
                 def wrap = makeScriptWrapper(closureExp, source, 'script', unit )
                 block.statements.add( new ExpressionStatement(wrap) )
 

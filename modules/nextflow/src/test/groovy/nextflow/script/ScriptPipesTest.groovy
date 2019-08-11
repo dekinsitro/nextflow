@@ -164,7 +164,7 @@ class ScriptPipesTest extends Specification {
         }     
         
         workflow {
-            emit:  foo | map { it.reverse() }
+            emit: foo | map { it.reverse() }
         }
         '''
 

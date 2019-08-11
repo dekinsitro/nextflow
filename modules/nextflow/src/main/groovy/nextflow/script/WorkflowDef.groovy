@@ -36,7 +36,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 
     private String name
 
-    private TaskBody body
+    private BodyDef body
 
     private List<String> declaredInputs
 
@@ -61,7 +61,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         final resolver = new WorkflowParamsResolver()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(resolver)
-        this.body = (TaskBody)copy.call()
+        this.body = (BodyDef)copy.call()
         // now it can access the parameters
         this.declaredInputs = resolver.getGets()
         this.declaredOutputs = resolver.getEmits()
@@ -69,7 +69,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     }
 
     @Deprecated
-    WorkflowDef(BaseScript owner, TaskBody body, String name=null, List<String> inputs = Collections.emptyList() ) {
+    WorkflowDef(BaseScript owner, BodyDef body, String name=null, List<String> inputs = Collections.emptyList() ) {
         this.owner = owner
         this.body = body
         this.name = name
@@ -97,7 +97,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 
     ChannelArrayList getOut() { output }
 
-    @PackageScope TaskBody getBody() { body }
+    @PackageScope BodyDef getBody() { body }
 
     @PackageScope List<String> getDeclaredInputs() { declaredInputs }
 

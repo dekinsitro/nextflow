@@ -202,7 +202,7 @@ class WorkflowDefTest extends Specification {
     def 'should validate collect output'() {
 
         given:
-        def workflow = new WorkflowDef(Mock(BaseScript), Mock(TaskBody))
+        def workflow = new WorkflowDef(Mock(BaseScript), Mock(BodyDef))
         def result
 
         when:
@@ -266,7 +266,7 @@ class WorkflowDefTest extends Specification {
 
     def 'should clone with a new name' () {
         given:
-        def work = new WorkflowDef(Mock(BaseScript), Mock(TaskBody), 'woo')
+        def work = new WorkflowDef(Mock(BaseScript), Mock(BodyDef), 'woo')
 
         when:
         def copy = work.withName('bar')
@@ -276,7 +276,7 @@ class WorkflowDefTest extends Specification {
 
     def 'should collect output' () {
         given:
-        def work = new WorkflowDef(Mock(BaseScript), Mock(TaskBody), 'woo')
+        def work = new WorkflowDef(Mock(BaseScript), Mock(BodyDef), 'woo')
 
         when:
         def list = work.collectOutputs()
