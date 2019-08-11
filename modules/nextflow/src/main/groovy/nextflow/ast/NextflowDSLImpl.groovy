@@ -35,7 +35,6 @@ import nextflow.script.TokenVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
-import org.codehaus.groovy.ast.ConstructorNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
@@ -62,6 +61,7 @@ import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
+import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
@@ -103,6 +103,13 @@ class NextflowDSLImpl implements ASTTransformation {
     @CompileStatic
     static class DslCodeVisitor extends ClassCodeVisitorSupport {
 
+        final static String WORKFLOW_GET = 'get'
+        final static String WORKFLOW_EMIT = 'emit'
+        final static String WORKFLOW_MAIN = 'main'
+        final static String WORKFLOW_PUBLISH = 'publish'
+
+        final static Random RND = new Random()
+
         final private SourceUnit unit
 
         private String currentTaskName
@@ -131,58 +138,6 @@ class NextflowDSLImpl implements ASTTransformation {
                     functionNames.add(node.name)
             }
             super.visitMethod(node)
-        }
-
-        /**
-         * Creates a statement that invokes the {@link nextflow.script.ScriptMeta#setProcessNames(java.util.List)} (java.util.List)} method
-         * used to initialize the script with metadata collected during script parsing
-         *
-         * @return The method invocation statement
-         */
-        @Deprecated
-        protected Statement makeSetProcessNamesStm() {
-            final names = new ListExpression()
-            for( String it: processNames ) {
-                names.addExpression(new ConstantExpression(it.toString()))
-            }
-
-            // the method list argument
-            final args = new ArgumentListExpression()
-            args.addExpression(names)
-
-            // some magic code
-            // this generates the invocation of the method:
-            //   nextflow.script.ScriptMeta.get(this).setProcessNames(<list of process names>)
-            final scriptMeta = new PropertyExpression( new PropertyExpression(new VariableExpression('nextflow'),'script'), 'ScriptMeta')
-            final thiz = new ArgumentListExpression(); thiz.addExpression( new VariableExpression('this') )
-            final meta = new MethodCallExpression( scriptMeta, 'get', thiz )
-            final call = new MethodCallExpression( meta, 'setProcessNames', args)
-            final stm = new ExpressionStatement(call)
-            return stm
-        }
-
-        /**
-         * Add to constructor a method call to inject parsed metadata
-         * 
-         * @param node
-         */
-        @Deprecated
-        protected void injectMetadata(ClassNode node) {
-            for( ConstructorNode constructor : node.getDeclaredConstructors() ) {
-                def code = constructor.getCode()
-                if( code instanceof BlockStatement ) {
-                    code.addStatement(makeSetProcessNamesStm())
-                }
-                else if( code instanceof ExpressionStatement ) {
-                    def expr = code
-                    def block = new BlockStatement()
-                    block.addStatement(expr)
-                    block.addStatement(makeSetProcessNamesStm())
-                    constructor.setCode(block)
-                }
-                else
-                    throw new IllegalStateException("Invalid constructor expression: $code")
-            }
         }
 
         @Override
@@ -276,13 +231,13 @@ class NextflowDSLImpl implements ASTTransformation {
         /*
          * this method transforms the DSL definition
          *
-         *   workflow foo (ch1, ch2) {
+         *   workflow foo {
          *     code
          *   }
          *
          * into a method invocation as
          *
-         *   workflow('foo', ['ch1':ch1, 'ch2':ch2], { -> code })
+         *   workflow('foo', { -> code })
          *
          */
         protected void convertWorkflowDef(MethodCallExpression methodCall, SourceUnit unit) {
@@ -301,7 +256,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
                 def newArgs = new ArgumentListExpression()
                 def body = (ClosureExpression)args[0]
-                newArgs.addExpression( makeWorkflowBodyWrapper(body) )
+                newArgs.addExpression( makeWorkflowDefWrapper(body) )
                 methodCall.setArguments( newArgs )
                 return 
             }
@@ -334,28 +289,144 @@ class NextflowDSLImpl implements ASTTransformation {
             def newArgs = new ArgumentListExpression()
 
             // add the workflow body def
-            if( len == 0 || !(args[len-1] instanceof ClosureExpression)) {
-                syntaxError(methodCall, "Invalid workflow definition -- Missing definition block")
+            if( len != 1 || !(args[0] instanceof ClosureExpression)) {
+                syntaxError(methodCall, "Invalid workflow definition")
                 return
             }
 
-            final body = (ClosureExpression)args[len-1]
-            newArgs.addExpression( makeWorkflowBodyWrapper(body) )
+            final body = (ClosureExpression)args[0]
             newArgs.addExpression( constX(name) )
-            newArgs.addExpression( makeArgsList(args) )
+            newArgs.addExpression( makeWorkflowDefWrapper(body) )
 
             // set the new list as the new arguments
             methodCall.setArguments( newArgs )
         }
 
-        protected Expression makeWorkflowBodyWrapper( ClosureExpression closure ) {
-            // make a copy to clear closure implicit `it` parameter
-            def copy = new ClosureExpression(null, closure.code)
-            def buffer = new StringBuilder()
-            def block = (BlockStatement) closure.code
-            for( Statement stm : block.getStatements() )
-                readSource(stm, buffer, unit)
-            makeScriptWrapper(copy, buffer.toString(), 'workflow', unit)
+        protected MethodCallExpression isMethodCallX(Expression expr) {
+            return expr instanceof MethodCallExpression ? expr : null
+        }
+
+        protected VariableExpression isVariableX(Expression expr) {
+            return expr instanceof VariableExpression ? expr : null
+        }
+
+        protected VariableExpression isThisX(Expression expr) {
+            isVariableX(expr)?.name == 'this' ? (VariableExpression)expr : null
+        }
+
+        protected BinaryExpression isBinaryX(Expression expr) {
+            expr instanceof BinaryExpression ? expr : null
+        }
+
+        protected BinaryExpression isAssignX(Expression expr) {
+            isBinaryX(expr)?.operation?.type == Types.ASSIGN ? (BinaryExpression)expr : null
+        }
+
+        protected Statement normWorkflowParam(ExpressionStatement stat, String type, Set<String> emitNames, List<Statement> body) {
+            MethodCallExpression callx
+            VariableExpression varx
+            BinaryExpression binx
+
+            if( (callx=isMethodCallX(stat.expression)) && isThisX(callx.objectExpression) ) {
+                final name = "_${type}_${callx.methodAsString}"
+                return stmt( callThisX(name, callx.arguments) )
+            }
+
+            if( (varx=isVariableX(stat.expression)) ) {
+                final name = "_${type}_${varx.name}"
+                return stmt( callThisX(name) )
+            }
+
+            if( type == WORKFLOW_EMIT ) {
+                if( (binx=isAssignX(stat.expression)) ) {
+                    // keep the statement in body to allow it to be evaluated
+                    body.add(stat)
+                    // and create method call expr to capture the var name in the emission
+                    final left = (VariableExpression)binx.leftExpression
+                    final name = "_${type}_${left.name}"
+                    return stmt( callThisX(name) )
+                }
+
+                // wrap the expression into a assignment expression
+                final name = getRandomName(emitNames)
+                final left = new VariableExpression(name)
+                final right = stat.expression
+                final token = new Token(Types.ASSIGN, '=', -1, -1)
+                final assign = new BinaryExpression(left, token, right)
+                body.add(stmt(assign))
+
+                // the call method statement for the emit declaration
+                return stmt( callThisX("_${type}_${name}") )
+            }
+
+
+            syntaxError(stat, "Workflow malformed parameter definition")
+            return stat
+        }
+
+        protected String getRandomName(Set<String> allNames) {
+            String result
+            while( true ) {
+                result = "\$out${RND.nextInt(10000)}"
+                if( allNames.add(result) )
+                    break
+            }
+            return result
+        }
+
+        protected Expression makeWorkflowDefWrapper( ClosureExpression closure ) {
+
+            final codeBlock = (BlockStatement) closure.code
+            final codeStms = codeBlock.statements
+            final scope = codeBlock.variableScope
+
+            final visited = new HashMap<String,Boolean>(5);
+            final emitNames = new LinkedHashSet<String>(codeStms.size())
+            final wrap = new ArrayList<Statement>(codeStms.size())
+            final body = new ArrayList<Statement>(codeStms.size())
+            final source = new StringBuilder()
+            String context = null
+            String previous = null
+            for( Statement stm : codeStms ) {
+                readSource(stm, source, unit)
+                previous = context
+                context = stm.statementLabel ?: context
+                // check for changing context
+                if( context && context != previous ) {
+                    if( visited[context] && visited[previous] ) {
+                        syntaxError(stm, "Unexpected workflow `${context}` context here")
+                        break
+                    }
+                }
+                visited[context] = true
+
+                switch (context) {
+                    case WORKFLOW_GET:
+                    case WORKFLOW_EMIT:
+                    case WORKFLOW_PUBLISH:
+                        if( !(stm instanceof ExpressionStatement) ) {
+                            syntaxError(stm, "Workflow malformed parameter definition")
+                            break
+                        }
+                        wrap.add(normWorkflowParam(stm as ExpressionStatement, context, emitNames, body))
+                    break
+
+                    case WORKFLOW_MAIN:
+                        body.add(stm)
+                        break
+
+                    default:
+                        body.add(stm)
+
+                }
+
+            }
+
+            final bodyClosure = closureX(null, block(scope, body))
+            final invokeBody = makeScriptWrapper(bodyClosure, source.toString(), 'workflow', unit)
+            wrap.add( stmt(invokeBody) )
+
+            closureX(null, block(scope, wrap))
         }
 
         protected void syntaxError(ASTNode node, String message) {
@@ -448,7 +519,7 @@ class NextflowDSLImpl implements ASTTransformation {
                             readSource(stm,source,unit)
                             break
 
-                    // capture the statements in a when guard and remove from the current block
+                        // capture the statements in a when guard and remove from the current block
                         case 'when':
                             if( iterator.hasNext() ) {
                                 iterator.remove()

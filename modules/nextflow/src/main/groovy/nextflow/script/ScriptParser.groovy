@@ -87,7 +87,9 @@ class ScriptParser {
 
     ScriptBinding getBinding() { binding }
 
-    Object getResult() { result }
+    Object getResult() {
+        result!=null ? result : session.workflow?.out
+    }
 
     BaseScript getScript() { script }
 

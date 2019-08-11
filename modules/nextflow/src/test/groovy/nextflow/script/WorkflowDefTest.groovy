@@ -8,6 +8,7 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.ast.NextflowDSL
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 import spock.lang.Specification
@@ -61,13 +62,21 @@ class WorkflowDefTest extends Specification {
               print 'Hello world'
             }
         
-            workflow bravo(foo, bar) {
-              print foo
-              print bar
-              return foo+bar
+            workflow bravo() {
+              get: foo
+              get: bar
+              main:
+                print foo
+                print bar
+              
+              emit: 
+                foo+bar
             }
             
-            workflow delta(foo) {
+            workflow delta() {
+                get: foo
+                get: bar
+                main:
                 println foo+bar
             }
 
@@ -85,7 +94,7 @@ class WorkflowDefTest extends Specification {
 
         meta.getWorkflow('bravo') .declaredInputs == ['foo', 'bar']
         meta.getWorkflow('bravo') .declaredVariables == []
-        meta.getWorkflow('bravo') .source.stripIndent() == "print foo\nprint bar\nreturn foo+bar\n"
+        meta.getWorkflow('bravo') .source.stripIndent() == "get: foo\nget: bar\nprint foo\nprint bar\nreturn foo+bar\n"
 
         meta.getWorkflow('delta') .declaredInputs == ['foo']
         meta.getWorkflow('delta') .declaredVariables == ['bar']
@@ -96,10 +105,6 @@ class WorkflowDefTest extends Specification {
     }
 
     def 'should define anonymous workflow' () {
-        given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
                     
@@ -110,9 +115,8 @@ class WorkflowDefTest extends Specification {
         '''
 
         when:
-        def binding = new ScriptBinding().setSession(Mock(Session))
-        def script = (TestScript)new GroovyShell(binding, config).parse(SCRIPT).run()
-        def meta = ScriptMeta.get(script)
+        def runner = new MockScriptRunner().setScript(SCRIPT).invoke()
+        def meta = ScriptMeta.get(runner.getScript())
         then:
         meta.getWorkflow(null).getSource().stripIndent() == 'print 1\nprint 2\n'
 
@@ -127,17 +131,50 @@ class WorkflowDefTest extends Specification {
 
         def SCRIPT = '''
                     
-            workflow alpha(x) {
-              return "$x world"
+            workflow alpha {
+              get: foo
+              emit: bar
+              emit: baz  
+              
+              main: "$x world"
             }
        
         '''
 
         when:
-        def script = (TestScript)new GroovyShell(config).parse(SCRIPT).run()
+        def binding = new ScriptBinding().setSession(Mock(Session))
+        def script = (TestScript)new GroovyShell(binding,config).parse(SCRIPT).run()
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
-        workflow.declaredInputs == ['x']
+        workflow.declaredInputs == ['foo']
+        workflow.declaredOutputs == ['bar', 'baz']
+
+    }
+
+    def 'should report malformed workflow block' () {
+
+        given:
+        def config = new CompilerConfiguration()
+        config.setScriptBaseClass(TestScript.class.name)
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+
+        def SCRIPT = '''
+                    
+            workflow alpha {
+              get: foo
+              main: println foo
+              get: bar
+            }
+       
+        '''
+
+        when:
+        def binding = new ScriptBinding().setSession(Mock(Session))
+        def script = (TestScript)new GroovyShell(binding,config).parse(SCRIPT).run()
+        def workflow = ScriptMeta.get(script).getWorkflow('alpha')
+        then:
+        def e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('Unexpected workflow `get` context here')
 
     }
 
@@ -235,6 +272,16 @@ class WorkflowDefTest extends Specification {
         def copy = work.withName('bar')
         then:
         copy.getName() == 'bar'
+    }
+
+    def 'should collect output' () {
+        given:
+        def work = new WorkflowDef(Mock(BaseScript), Mock(TaskBody), 'woo')
+
+        when:
+        def list = work.collectOutputs()
+        then:
+        throw new UnsupportedOperationException("TODO")
     }
 
 }

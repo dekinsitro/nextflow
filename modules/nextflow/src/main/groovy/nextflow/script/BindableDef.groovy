@@ -40,6 +40,11 @@ abstract class BindableDef extends ComponentDef {
             final scope = ExecutionStack.binding()
             scope.setVariable(name, comp)
         }
+        else if( !name && comp instanceof WorkflowDef ) {
+            // inject the main flow in the session
+            final scope = (ScriptBinding)ExecutionStack.binding()
+            scope.session.workflow = comp
+        }
         return result
     }
 

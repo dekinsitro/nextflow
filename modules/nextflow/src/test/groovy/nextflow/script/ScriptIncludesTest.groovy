@@ -99,9 +99,11 @@ class ScriptIncludesTest extends Specification {
               result = data.toUpperCase()
         }   
         
-        workflow alpha(data) {
-            foo(data)
-            bar(foo.output)
+        workflow alpha {
+            get: data
+            main: foo(data)
+                  bar(foo.output)
+            emit: bar.out
         }
         
         '''
@@ -110,7 +112,8 @@ class ScriptIncludesTest extends Specification {
         include "$MODULE" 
    
         workflow {
-            alpha('Hello')
+            main: alpha('Hello')
+            emit: alpha.out 
         }
         """
 
@@ -151,13 +154,16 @@ class ScriptIncludesTest extends Specification {
         SCRIPT.text = """
         include "$MODULE"
 
-        workflow alpha(data) {
-            foo(data)
-            bar(foo.output)
+        workflow alpha {
+            get: data
+            main: foo(data)
+                  bar(foo.output)
+            emit: bar.out      
         }
    
         workflow {
-            alpha('Hello')
+            main: alpha('Hello')
+            emit: alpha.out 
         }
         """
 
@@ -202,8 +208,9 @@ class ScriptIncludesTest extends Specification {
    
         data = 'Hello'
         workflow {
-            foo(data)
-            bar(foo.output)
+            main: foo(data)
+                  bar(foo.output)
+            emit: bar.out 
         }
         """
 
@@ -245,6 +252,7 @@ class ScriptIncludesTest extends Specification {
             data = 'Hello'
             foo(data)
             bar(foo.output)
+            emit: bar.out 
         }
         """
 
@@ -280,7 +288,8 @@ class ScriptIncludesTest extends Specification {
         hello_ch = Channel.from('world')
         
         workflow {
-            foo(hello_ch)
+            main: foo(hello_ch)
+            emit: foo.out 
         }
         """
 
@@ -318,9 +327,10 @@ class ScriptIncludesTest extends Specification {
         include 'module.nf'
 
         workflow {
-            ch1 = Channel.from('world')
-            ch2 = Channel.value(['x', '/some/file'])
-            foo(ch1, ch2)
+          main: ch1 = Channel.from('world')
+                ch2 = Channel.value(['x', '/some/file'])
+                foo(ch1, ch2)
+          emit: foo.out  
         }
         """
 
@@ -370,7 +380,8 @@ class ScriptIncludesTest extends Specification {
         include 'module.nf'        
 
         workflow {
-            bar( foo('Ciao') )
+            main: bar( foo('Ciao') )
+            emit: bar.out
         }
         """
         def runner = new MockScriptRunner()
@@ -386,7 +397,8 @@ class ScriptIncludesTest extends Specification {
         include 'module.nf'        
         
         workflow {
-          (ch0, ch1) = foo('Ciao')
+          main: (ch0, ch1) = foo('Ciao')
+          emit: ch0; ch1
         }
         """
         runner = new MockScriptRunner()
@@ -421,7 +433,8 @@ class ScriptIncludesTest extends Specification {
         include "module.nf" params(foo:'Hello', bar: 'world')
             
         workflow { 
-            foo() 
+            main: foo()
+            emit: foo.out 
         }
         """
 
@@ -488,7 +501,8 @@ class ScriptIncludesTest extends Specification {
         include 'module.nf' params(x: 'Hola mundo')
         
         workflow {
-            return foo()
+            main: foo()
+            emit: foo.out
         }    
         """
 
@@ -664,7 +678,8 @@ class ScriptIncludesTest extends Specification {
         workflow {
             foo('Hello')
             bar('World')
-            return [ foo.output, bar.output ]
+            emit: foo.out
+            emit: bar.out
         }
         """
 
