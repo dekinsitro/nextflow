@@ -133,7 +133,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     @Override
     Object run(Object[] args) {
-        final params = ChannelArrayList.spread(args)
+        final params = ChannelOut.spread(args)
 
         // sanity check
         if( params.size() != declaredInputs.size() )
@@ -175,7 +175,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
         final result = declaredOutputs.getChannels()
         assert result.size()>0, "Process output should contains at least one channel"
 
-        return output = new ChannelArrayList(result)
+        return output = new ChannelOut(result)
     }
 
 }

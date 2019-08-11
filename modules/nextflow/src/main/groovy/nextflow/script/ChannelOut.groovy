@@ -25,16 +25,20 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class ChannelArrayList implements List {
+class ChannelOut implements List {
 
     @Delegate List target
 
-    ChannelArrayList() {
+    ChannelOut() {
         target = Collections.emptyList()
     }
 
-    ChannelArrayList(List c) {
+    ChannelOut(List c) {
         target = Collections.unmodifiableList(c)
+    }
+
+    ChannelOut(LinkedHashMap<String,?> channels) {
+        target = new ArrayList(channels.keySet())
     }
 
     def getFirst() { target[0] }
@@ -66,7 +70,7 @@ class ChannelArrayList implements List {
     static List spread(Object[] args) {
         final result = new ArrayList(args.size()*2)
         for( int i=0; i<args.size(); i++ ) {
-            if( args[i] instanceof ChannelArrayList ) {
+            if( args[i] instanceof ChannelOut ) {
                 final list = (List)args[i]
                 for( def el : list ) {
                     result.add(el)

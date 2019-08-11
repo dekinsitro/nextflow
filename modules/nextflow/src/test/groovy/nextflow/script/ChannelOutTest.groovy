@@ -6,18 +6,18 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ChannelArrayListTest extends Specification {
+class ChannelOutTest extends Specification {
 
     def 'should get values' () {
 
         when:
-        def arr = new ChannelArrayList()
+        def arr = new ChannelOut()
         then:
         arr.fifth == null
         arr.second == null
 
         when:
-        arr = new ChannelArrayList([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+        arr = new ChannelOut([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
         then:
         arr.first == 1
         arr.second == 2
@@ -34,17 +34,17 @@ class ChannelArrayListTest extends Specification {
 
     def 'should validate output spread' () {
         given:
-        def out1 = new ChannelArrayList( ['a', 'b'] )
-        def out2 = new ChannelArrayList( ['x', 'y', 'z'])
+        def out1 = new ChannelOut( ['a', 'b'] )
+        def out2 = new ChannelOut( ['x', 'y', 'z'])
 
         expect:
-        ChannelArrayList.spread([1, 2, 3]) \
+        ChannelOut.spread([1, 2, 3]) \
             == [1, 2, 3]
 
-        ChannelArrayList.spread([out1]) \
+        ChannelOut.spread([out1]) \
             == ['a', 'b']
 
-        ChannelArrayList.spread([out1, 'p', 'q', out2] ) \
+        ChannelOut.spread([out1, 'p', 'q', out2] ) \
             == ['a', 'b', 'p', 'q', 'x', 'y', 'z']
     }
 }

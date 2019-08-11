@@ -13,7 +13,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.dag.NodeMarker
 import nextflow.exception.ScriptRuntimeException
-import nextflow.script.ChannelArrayList
+import nextflow.script.ChannelOut
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Represents an nextflow operation invocation
@@ -50,7 +50,7 @@ class OpCall implements Callable {
         assert method
         this.owner = owner
         this.methodName = method
-        this.args = ChannelArrayList.spread(args).toArray()
+        this.args = ChannelOut.spread(args).toArray()
         this.setSource(source)
     }
 
@@ -58,10 +58,10 @@ class OpCall implements Callable {
         assert method
         this.owner = OperatorEx.instance
         this.methodName = method
-        this.args = ChannelArrayList.spread(args).toArray()
+        this.args = ChannelOut.spread(args).toArray()
     }
 
-    OpCall setSource(ChannelArrayList left) {
+    OpCall setSource(ChannelOut left) {
         if( left.size()==1 ) {
             this.source = left[0] as DataflowWriteChannel
             return this
@@ -76,7 +76,7 @@ class OpCall implements Callable {
     }
 
     OpCall setSource( obj ) {
-        if( obj instanceof ChannelArrayList )
+        if( obj instanceof ChannelOut )
             return setSource(obj)
         else if( obj instanceof DataflowWriteChannel)
             return setSource(obj)

@@ -3,7 +3,7 @@ package nextflow.extension
 import nextflow.Channel
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
-import nextflow.script.ChannelArrayList
+import nextflow.script.ChannelOut
 import spock.lang.Specification
 /**
  *
@@ -47,13 +47,13 @@ class ChannelExTest extends Specification {
         def ch2 = Channel.value('Y')
 
         when:
-         new ChannelArrayList([ ch1 ])
+         new ChannelOut([ch1 ])
                  .set { alpha }
         then:
         session.binding.alpha.val == 'X'
 
         when:
-        new ChannelArrayList([ ch1, ch2 ])
+        new ChannelOut([ch1, ch2 ])
                 .set { alpha }
         then:
         thrown(ScriptRuntimeException)

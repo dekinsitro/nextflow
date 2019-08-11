@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
  */
 public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCreationHandle {
 
-    static final private String CHANNEL_ARRAY_LIST = "nextflow.script.ChannelArrayList";
+    static final private String CHANNEL_OUT_LIST = "nextflow.script.ChannelOut";
 
     static final private Logger log = LoggerFactory.getLogger(CustomMetaClassCreationHandle.class);
 
@@ -58,9 +58,9 @@ public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCr
         // this class needs to be referenced via reflection otherwise compilation fail
         // since it requires AST transformation
         try {
-            channelOutHolderClass = Class.forName(CHANNEL_ARRAY_LIST);
+            channelOutHolderClass = Class.forName(CHANNEL_OUT_LIST);
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Missing core dependency: " + CHANNEL_ARRAY_LIST, e) ;
+            throw new RuntimeException("Missing core dependency: " + CHANNEL_OUT_LIST, e) ;
         }
     }
 

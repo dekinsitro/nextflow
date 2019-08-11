@@ -212,7 +212,7 @@ class WorkflowDefTest extends Specification {
         result.val == null
 
         when:
-        def array = new ChannelArrayList()
+        def array = new ChannelOut()
         result = workflow.collectOutputs(array)
         then:
         result == array
@@ -256,7 +256,7 @@ class WorkflowDefTest extends Specification {
         def var1 = new DataflowQueue(); var1 << 'a'
         def var2 = new DataflowQueue(); var2 << 'b'
         def var3 = new DataflowQueue(); var3 << 'c'
-        result = workflow.collectOutputs([var1, new ChannelArrayList([var2, var3])])
+        result = workflow.collectOutputs([var1, new ChannelOut([var2, var3])])
         then:
         result.size() == 3
         result[0].val == 'a'

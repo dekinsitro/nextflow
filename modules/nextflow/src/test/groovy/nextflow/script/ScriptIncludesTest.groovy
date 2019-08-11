@@ -298,7 +298,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof ChannelArrayList
+        result instanceof ChannelOut
         result[0].val == 'echo Hello world'
 
         cleanup:
@@ -339,7 +339,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof ChannelArrayList
+        result instanceof ChannelOut
         result[0].val == 'echo sample=world pairId=x reads=/some/file'
     }
 
@@ -388,7 +388,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof ChannelArrayList
+        result instanceof ChannelOut
         result[0].val == 'echo Ciao world'
 
 
@@ -443,7 +443,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof ChannelArrayList
+        result instanceof ChannelOut
         result[0].val == 'echo Hello world'
         
     }

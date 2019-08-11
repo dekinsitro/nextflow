@@ -19,10 +19,6 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.Channel
 import nextflow.exception.MissingValueException
 import nextflow.extension.ChannelFactory
 /**
@@ -49,7 +45,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     // -- following attributes are mutable and instance dependant
     // -- therefore should not be cloned
 
-    private ChannelArrayList output
+    private ChannelOut output
 
     private WorkflowBinding binding
 
@@ -63,8 +59,8 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         copy.setDelegate(resolver)
         this.body = (BodyDef)copy.call()
         // now it can access the parameters
-        this.declaredInputs = resolver.getGets()
-        this.declaredOutputs = resolver.getEmits()
+        this.declaredInputs = new ArrayList<>(resolver.getGets())
+        this.declaredOutputs = new ArrayList<>(resolver.getEmits())
         this.variableNames = getVarNames0()
     }
 
@@ -95,7 +91,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 
     WorkflowBinding getBinding() { binding }
 
-    ChannelArrayList getOut() { output }
+    ChannelOut getOut() { output }
 
     @PackageScope BodyDef getBody() { body }
 
@@ -123,7 +119,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 
 
     protected void collectInputs(Binding context, Object[] args) {
-        final params = ChannelArrayList.spread(args)
+        final params = ChannelOut.spread(args)
         if( params.size() != declaredInputs.size() )
             throw new IllegalArgumentException("Workflow `$name` declares ${declaredInputs.size()} input channels but ${params.size()} were specified")
 
@@ -134,7 +130,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         }
     }
 
-    protected ChannelArrayList collectOutputs(List<String> emissions) {
+    protected ChannelOut collectOutputs(List<String> emissions) {
         final channels = new ArrayList(emissions.size())
         for( String name : emissions ) {
             if( !binding.hasVariable(name) )
@@ -145,7 +141,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
                 channels.add(obj)
             }
 
-            else if( obj instanceof ChannelArrayList ) {
+            else if( obj instanceof ChannelOut ) {
                 if( obj.size()>1 )
                     throw new IllegalArgumentException("Cannot emit a multi-channel output: $name")
                 if( obj.size()==0 )
@@ -159,34 +155,10 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
                 channels.add(value)
             }
         }
-        return new ChannelArrayList(channels)
+        return new ChannelOut(channels)
     }
 
-    private List asChannel(List list) {
-        final allScalar = ChannelFactory.allScalar(list)
-        for( int i=0; i<list.size(); i++ ) {
-            def el = list[i]
-            if( !ChannelFactory.isChannel(el) ) {
-                list[i] = asChannel(el, allScalar)
-            }
-        }
-        return list
-    }
 
-    private DataflowWriteChannel asChannel(Object x, boolean var) {
-        if( var ) {
-            def result = new DataflowVariable()
-            result.bind(x)
-            return result
-        }
-
-        final result = new DataflowQueue()
-        if( x != null ) {
-            result.bind(x)
-            result.bind(Channel.STOP)
-        }
-        return result
-    }
 
     
     Object run(Object[] args) {
@@ -213,18 +185,21 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 
 }
 
-
+/**
+ * Hold workflow parameters
+ */
+@CompileStatic
 class WorkflowParamsResolver implements GroovyInterceptable {
 
-    List<String> gets = new ArrayList<>(10)
-    List<String> emits = new ArrayList<>(10)
+    Map<String,Object[]> gets = new LinkedHashMap<>(10)
+    Map<String,Object[]> emits = new LinkedHashMap<>(10)
 
     @Override
     def invokeMethod(String name, Object args) {
         if( name.startsWith('_get_') )
-            gets.add(name.substring(5))
+            gets.put(name.substring(5), args)
         else if( name.startsWith('_emit_') )
-            emits.add(name.substring(6))
+            emits.put(name.substring(6), args)
         else
             throw new IllegalArgumentException("Unknown workflow parameter definition: $name")
 
