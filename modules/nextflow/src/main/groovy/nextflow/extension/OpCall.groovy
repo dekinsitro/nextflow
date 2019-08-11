@@ -50,7 +50,7 @@ class OpCall implements Callable {
         assert method
         this.owner = owner
         this.methodName = method
-        this.args = args
+        this.args = ChannelArrayList.spread(args).toArray()
         this.setSource(source)
     }
 
@@ -58,7 +58,7 @@ class OpCall implements Callable {
         assert method
         this.owner = OperatorEx.instance
         this.methodName = method
-        this.args = args
+        this.args = ChannelArrayList.spread(args).toArray()
     }
 
     OpCall setSource(ChannelArrayList left) {
@@ -253,13 +253,6 @@ class OpCall implements Callable {
         return false
     }
 
-    protected void defineArgsAs(List inputs, MetaMethod method) {
-        def types = method.getParameterTypes()
-        for( int i=1; i<types.length; i++ ) {
-            def t = types[i]
-            t.getClass().isAssignableFrom(DataflowReadChannel)
-        }
-    }
 
     protected Object invoke0(DataflowReadChannel channel, Object[] args) {
 

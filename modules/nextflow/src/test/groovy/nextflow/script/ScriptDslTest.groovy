@@ -254,4 +254,58 @@ class ScriptDslTest extends Specification {
         result[0].val == 'HELLO'
     }
 
+    def 'should allow process and operator composition' () {
+        given:
+        def SCRIPT = '''
+        process foo {
+          output: val result
+          exec: result = "hello"
+        }     
+ 
+        process bar {
+          output: val result
+          exec: result = "world"
+        } 
+        
+        workflow {
+           main: foo(); bar()
+           emit: foo.out.mix(bar.out)      
+        }
+        '''
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result[0].val == 'hello'
+        result[0].val == 'world'
+    }
+
+    def 'should allow pipe process and operator' () {
+        given:
+        def SCRIPT = '''
+        process foo {
+          output: val result
+          exec: result = "hello"
+        }     
+ 
+        process bar {
+          output: val result
+          exec: result = "world"
+        } 
+        
+        workflow {
+           emit: (foo & bar) | mix      
+        }
+        '''
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result[0].val == 'hello'
+        result[0].val == 'world'
+    }
 }
