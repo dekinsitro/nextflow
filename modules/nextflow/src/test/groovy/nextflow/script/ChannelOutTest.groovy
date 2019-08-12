@@ -1,5 +1,6 @@
 package nextflow.script
 
+import nextflow.Channel
 import spock.lang.Specification
 
 /**
@@ -30,6 +31,21 @@ class ChannelOutTest extends Specification {
         arr.ninth == 9
         arr.tenth == 10
 
+    }
+
+    def 'should get out by name' () {
+        given:
+        def ch1 = Channel.value('a')
+        def ch2 = Channel.value('b')
+
+        when:
+        def out = new ChannelOut([foo:ch1, bar:ch2])
+        then:
+        out[0].val == 'a'
+        out[1].val == 'b'
+        and:
+        out.foo.val == 'a'
+        out.bar.val == 'b'
     }
 
     def 'should validate output spread' () {

@@ -59,7 +59,6 @@ import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
-import nextflow.script.WorkflowDef
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.StatsObserver
@@ -236,8 +235,6 @@ class Session implements ISession {
     boolean ansiLog
 
     AnsiLogObserver ansiLogObserver
-
-    WorkflowDef workflow
 
     FilePorter getFilePorter() { filePorter }
 

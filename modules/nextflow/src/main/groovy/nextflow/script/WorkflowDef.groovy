@@ -59,8 +59,8 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         copy.setDelegate(resolver)
         this.body = (BodyDef)copy.call()
         // now it can access the parameters
-        this.declaredInputs = new ArrayList<>(resolver.getGets())
-        this.declaredOutputs = new ArrayList<>(resolver.getEmits())
+        this.declaredInputs = new ArrayList<>(resolver.getGets().keySet())
+        this.declaredOutputs = new ArrayList<>(resolver.getEmits().keySet())
         this.variableNames = getVarNames0()
     }
 
@@ -159,13 +159,11 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     }
 
 
-
-    
     Object run(Object[] args) {
         binding = new WorkflowBinding(owner)
         ExecutionStack.push(this)
         try {
-            run0(args)
+            return run0(args)
         }
         finally {
             ExecutionStack.pop()
@@ -180,7 +178,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
         closure.call()
         // collect the workflow outputs
-        output = collectOutputs(declaredOutputs)
+        return output = collectOutputs(declaredOutputs)
     }
 
 }
@@ -191,8 +189,8 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 @CompileStatic
 class WorkflowParamsResolver implements GroovyInterceptable {
 
-    Map<String,Object[]> gets = new LinkedHashMap<>(10)
-    Map<String,Object[]> emits = new LinkedHashMap<>(10)
+    Map<String,Object> gets = new LinkedHashMap<>(10)
+    Map<String,Object> emits = new LinkedHashMap<>(10)
 
     @Override
     def invokeMethod(String name, Object args) {

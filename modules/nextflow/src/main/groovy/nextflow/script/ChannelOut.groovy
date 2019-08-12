@@ -15,30 +15,38 @@
  */
 
 package nextflow.script
-
-import groovy.transform.CompileStatic
-
 /**
  * Models the output of a process or a workflow component returning
  * more than one output channels
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
 class ChannelOut implements List {
 
-    @Delegate List target
+    @Delegate List<Object> target
+
+    private LinkedHashMap channels
 
     ChannelOut() {
-        target = Collections.emptyList()
+        this.target = Collections.<Object>unmodifiableList(Collections.<Object>emptyList())
+        this.channels = Collections.emptyMap()
     }
 
     ChannelOut(List c) {
-        target = Collections.unmodifiableList(c)
+        target = Collections.<Object>unmodifiableList(c)
+        this.channels = Collections.emptyMap()
     }
 
     ChannelOut(LinkedHashMap<String,?> channels) {
-        target = new ArrayList(channels.keySet())
+        this.target = Collections.<Object>unmodifiableList(new ArrayList<>(channels.values()))
+        this.channels = new LinkedHashMap<>(channels)
+    }
+
+    def getProperty(String name) {
+        if( channels.containsKey(name) )
+            return channels.get(name)
+        else
+            metaClass.getProperty(this,name)
     }
 
     def getFirst() { target[0] }
