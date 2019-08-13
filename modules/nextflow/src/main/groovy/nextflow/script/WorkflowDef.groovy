@@ -50,7 +50,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 
     private WorkflowBinding binding
 
-    WorkflowDef(BaseScript owner, Closure rawBody, String name=null) {
+    WorkflowDef(BaseScript owner, Closure<BodyDef> rawBody, String name=null) {
         this.owner = owner
         this.name = name
         // invoke the body resolving in/out params

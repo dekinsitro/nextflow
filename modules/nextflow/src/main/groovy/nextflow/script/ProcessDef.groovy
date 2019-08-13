@@ -47,11 +47,11 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     private BodyDef taskBody
 
-    private Closure rawBody
+    private Closure<BodyDef> rawBody
 
     private Object output
 
-    ProcessDef(BaseScript owner, Closure body, String name ) {
+    ProcessDef(BaseScript owner, Closure<BodyDef> body, String name ) {
         this.owner = owner
         this.rawBody = body
         this.name = name
