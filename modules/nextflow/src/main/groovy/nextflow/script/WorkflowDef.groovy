@@ -54,11 +54,11 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         this.owner = owner
         this.name = name
         // invoke the body resolving in/out params
-        final copy = (Closure)rawBody.clone()
+        final copy = (Closure<BodyDef>)rawBody.clone()
         final resolver = new WorkflowParamsResolver()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(resolver)
-        this.body = (BodyDef)copy.call()
+        this.body = copy.call()
         // now it can access the parameters
         this.declaredInputs = new ArrayList<>(resolver.getGets().keySet())
         this.declaredOutputs = new ArrayList<>(resolver.getEmits().keySet())
