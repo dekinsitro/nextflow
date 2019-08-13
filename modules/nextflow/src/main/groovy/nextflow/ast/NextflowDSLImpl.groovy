@@ -76,6 +76,8 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class NextflowDSLImpl implements ASTTransformation {
 
+    static public String OUT_PREFIX = '$out'
+
     static private Set<String> RESERVED_NAMES
 
     static {
@@ -367,7 +369,7 @@ class NextflowDSLImpl implements ASTTransformation {
         protected String getRandomName(Set<String> allNames) {
             String result
             while( true ) {
-                result = "\$out${RND.nextInt(10000)}"
+                result = OUT_PREFIX + RND.nextInt(10000)
                 if( allNames.add(result) )
                     break
             }
@@ -388,7 +390,6 @@ class NextflowDSLImpl implements ASTTransformation {
             String context = null
             String previous = null
             for( Statement stm : codeStms ) {
-                readSource(stm, source, unit)
                 previous = context
                 context = stm.statementLabel ?: context
                 // check for changing context
@@ -417,10 +418,10 @@ class NextflowDSLImpl implements ASTTransformation {
 
                     default:
                         body.add(stm)
-
                 }
-
             }
+            // read the closure source
+            readSource(closure, source, unit, true)
 
             final bodyClosure = closureX(null, block(scope, body))
             final invokeBody = makeScriptWrapper(bodyClosure, source.toString(), 'workflow', unit)
@@ -660,18 +661,33 @@ class NextflowDSLImpl implements ASTTransformation {
         /**
          * Read the user provided script source string
          *
-         * @param statement
+         * @param node
          * @param buffer
          * @param unit
          */
-        private void readSource( Statement statement, StringBuilder buffer, SourceUnit unit ) {
-
-            def line = statement.getLineNumber()
-            def last = statement.getLastLineNumber()
-            for( int i=line; i<=last; i++ ) {
-                buffer.append( unit.source.getLine(i, null) ) .append('\n')
+        private void readSource( ASTNode node, StringBuilder buffer, SourceUnit unit, stripBrackets=false ) {
+            final colx = node.getColumnNumber()
+            final colz = node.getLastColumnNumber()
+            final first = node.getLineNumber()
+            final last = node.getLastLineNumber()
+            for( int i=first; i<=last; i++ ) {
+                def line = unit.source.getLine(i, null)
+                if( i==last ) {
+                    line = line.substring(0,colz-1)
+                    if( stripBrackets ) {
+                        line = line.replaceFirst(/}.*$/,'')
+                        if( !line.trim() ) continue
+                    }
+                }
+                if( i==first ) {
+                    line = line.substring(colx-1)
+                    if( stripBrackets ) {
+                        line = line.replaceFirst(/^.*\{/,'').trim()
+                        if( !line.trim() ) continue
+                    }
+                }
+                buffer.append(line) .append('\n')
             }
-
         }
 
         @Deprecated

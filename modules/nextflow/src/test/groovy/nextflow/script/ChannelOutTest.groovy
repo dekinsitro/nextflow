@@ -46,6 +46,8 @@ class ChannelOutTest extends Specification {
         and:
         out.foo.val == 'a'
         out.bar.val == 'b'
+        and:
+        out.getNames() == ['foo','bar'] as Set
     }
 
     def 'should validate output spread' () {

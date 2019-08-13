@@ -15,17 +15,22 @@
  */
 
 package nextflow.script
+
+import static nextflow.ast.NextflowDSLImpl.*
+
+import groovy.transform.CompileStatic
 /**
  * Models the output of a process or a workflow component returning
  * more than one output channels
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class ChannelOut implements List {
 
-    @Delegate List<Object> target
+    @Delegate List target
 
-    private LinkedHashMap channels
+    private Map<String,Object> channels
 
     ChannelOut() {
         this.target = Collections.<Object>unmodifiableList(Collections.<Object>emptyList())
@@ -33,14 +38,16 @@ class ChannelOut implements List {
     }
 
     ChannelOut(List c) {
-        target = Collections.<Object>unmodifiableList(c)
+        target = Collections.unmodifiableList(c)
         this.channels = Collections.emptyMap()
     }
 
     ChannelOut(LinkedHashMap<String,?> channels) {
-        this.target = Collections.<Object>unmodifiableList(new ArrayList<>(channels.values()))
-        this.channels = new LinkedHashMap<>(channels)
+        this.target = Collections.unmodifiableList(new ArrayList(channels.values()))
+        this.channels = new LinkedHashMap(channels)
     }
+
+    Set<String> getNames() { channels.keySet().findAll { !it.startsWith(OUT_PREFIX) }  }
 
     def getProperty(String name) {
         if( channels.containsKey(name) )

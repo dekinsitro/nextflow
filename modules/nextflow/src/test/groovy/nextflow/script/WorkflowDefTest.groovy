@@ -1,7 +1,6 @@
 package nextflow.script
 
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.NextflowMeta
@@ -14,6 +13,9 @@ import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 import spock.lang.Specification
 import spock.lang.Timeout
 import test.MockScriptRunner
+
+import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -68,7 +70,6 @@ class WorkflowDefTest extends Specification {
               main:
                 print foo
                 print bar
-              
               emit: 
                 foo+bar
             }
@@ -86,6 +87,7 @@ class WorkflowDefTest extends Specification {
         when:
         def script = (TestScript)new GroovyShell(config).parse(SCRIPT).run()
         def meta = ScriptMeta.get(script)
+        println meta.getWorkflow('bravo') .source.stripIndent()
         then:
         meta.definitions.size() == 4
         meta.getWorkflow('alpha') .declaredInputs == []
@@ -93,15 +95,29 @@ class WorkflowDefTest extends Specification {
         meta.getWorkflow('alpha') .source.stripIndent() == "print 'Hello world'\n"
 
         meta.getWorkflow('bravo') .declaredInputs == ['foo', 'bar']
-        meta.getWorkflow('bravo') .declaredVariables == []
-        meta.getWorkflow('bravo') .source.stripIndent() == "get: foo\nget: bar\nprint foo\nprint bar\nreturn foo+bar\n"
+        meta.getWorkflow('bravo') .declaredVariables.findAll{!it.startsWith(OUT_PREFIX)} == []
+        meta.getWorkflow('bravo') .source.stripIndent() == '''\
+              get: foo
+              get: bar
+              main:
+                print foo
+                print bar
+              emit: 
+                foo+bar
+              '''.stripIndent()
 
-        meta.getWorkflow('delta') .declaredInputs == ['foo']
-        meta.getWorkflow('delta') .declaredVariables == ['bar']
+        meta.getWorkflow('delta') .declaredInputs == ['foo','bar']
+        meta.getWorkflow('delta') .declaredVariables == []
+        meta.getWorkflow('delta') .source.stripIndent() == '''\
+                get: foo
+                get: bar
+                main:
+                println foo+bar
+                '''.stripIndent()
 
         meta.getWorkflow('empty') .source == ''
         meta.getWorkflow('empty') .declaredInputs == []
-        meta.getWorkflow('empty') .declaredVariables == []
+        meta.getWorkflow('empty') .declaredVariables.findAll{!it.startsWith(OUT_PREFIX)} == []
     }
 
     def 'should define anonymous workflow' () {
@@ -200,73 +216,54 @@ class WorkflowDefTest extends Specification {
     }
 
     def 'should validate collect output'() {
-
         given:
-        def workflow = new WorkflowDef(Mock(BaseScript), Mock(BodyDef))
-        def result
+        def ch1 = new DataflowQueue(); ch1 << 'blah blah'
+        def ch2 = new DataflowQueue(); ch2 << 'xxx'
+
+        def binding = new WorkflowBinding(foo: 'Hello', bar: 'world', ch1: ch1, ch2: new ChannelOut([ch2]))
+        def workflow = new WorkflowDef(binding: binding)
 
         when:
-        result = workflow.collectOutputs(null)
+        def result = workflow.collectOutputs(['foo'])
         then:
-        result instanceof DataflowVariable
-        result.val == null
-
-        when:
-        def array = new ChannelOut()
-        result = workflow.collectOutputs(array)
-        then:
-        result == array
-
-        when:
-        def dataVar = new DataflowVariable()
-        result = workflow.collectOutputs(dataVar)
-        then:
-        result == dataVar
-
-        when:
-        def dataQueue = new DataflowQueue()
-        result = workflow.collectOutputs(dataQueue)
-        then:
-        result == dataQueue
-
-        when:
-        def dataBroad = new DataflowBroadcast()
-        result = workflow.collectOutputs(dataBroad)
-        then:
-        result == dataBroad
-
-        when:
-        result = workflow.collectOutputs(['a', 'b'])
-        then:
-        result.size() == 2 
+        result instanceof ChannelOut
+        result.size()==1
         result[0] instanceof DataflowVariable
-        result[0].val == 'a'
+        result.foo instanceof DataflowVariable
+        result.foo.val == 'Hello'
+
+        when:
+        result = workflow.collectOutputs(['foo', 'bar'])
+        then:
+        result instanceof ChannelOut
+        result.size()==2
+        result[0] instanceof DataflowVariable
         result[1] instanceof DataflowVariable
-        result[1].val == 'b'
+        result.foo.val == 'Hello'
+        result.bar.val == 'world'
 
         when:
-        result = workflow.collectOutputs(['a', dataQueue])
+        result = workflow.collectOutputs(['ch1'])
         then:
-        result.size() == 2
+        result instanceof ChannelOut
+        result.size()==1
         result[0] instanceof DataflowQueue
-        result[0].val == 'a'
-        result[1] instanceof DataflowQueue
+        result[0].val == 'blah blah'
+
 
         when:
-        def var1 = new DataflowQueue(); var1 << 'a'
-        def var2 = new DataflowQueue(); var2 << 'b'
-        def var3 = new DataflowQueue(); var3 << 'c'
-        result = workflow.collectOutputs([var1, new ChannelOut([var2, var3])])
+        result = workflow.collectOutputs(['ch2'])
         then:
-        result.size() == 3
-        result[0].val == 'a'
-        result[1].val == 'b'
-        result[2].val == 'c'
+        result instanceof ChannelOut
+        result.size()==1
+        result[0] instanceof DataflowQueue
+        result[0].val == 'xxx'
+
     }
 
     def 'should clone with a new name' () {
         given:
-        def work = new WorkflowDef(Mock(BaseScript), Mock(BodyDef), 'woo')
+        def work = new WorkflowDef(name:'woo', body: new BodyDef({}, 'source'))
 
         when:
         def copy = work.withName('bar')
@@ -274,14 +271,56 @@ class WorkflowDefTest extends Specification {
         copy.getName() == 'bar'
     }
 
-    def 'should collect output' () {
+
+    def 'should capture workflow code' () {
         given:
-        def work = new WorkflowDef(Mock(BaseScript), Mock(BodyDef), 'woo')
+        def config = new CompilerConfiguration()
+        config.setScriptBaseClass(TestScript.class.name)
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+
+        def SCRIPT = '''
+                    
+            workflow alpha {
+              get:
+                foo
+              main:
+                print x 
+              emit: 
+                foo  
+            }
+        '''
 
         when:
-        def list = work.collectOutputs()
+        def binding = new ScriptBinding().setSession(Mock(Session))
+        def script = (TestScript)new GroovyShell(binding,config).parse(SCRIPT).run()
+        def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
-        throw new UnsupportedOperationException("TODO")
+        workflow.getSource().stripIndent() == '''\
+                            get:
+                              foo
+                            main:
+                              print x 
+                            emit: 
+                              foo  
+                            '''.stripIndent()
+    }
+
+    def 'should capture empty workflow code'  () {
+        given:
+        def config = new CompilerConfiguration()
+        config.setScriptBaseClass(TestScript.class.name)
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+
+        def SCRIPT = '''
+            workflow foo { } 
+        '''
+
+        when:
+        def binding = new ScriptBinding().setSession(Mock(Session))
+        def script = (TestScript)new GroovyShell(binding,config).parse(SCRIPT).run()
+        def workflow = ScriptMeta.get(script).getWorkflow('foo')
+        then:
+        workflow.getSource() == ''
     }
 
 }

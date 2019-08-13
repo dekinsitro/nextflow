@@ -19,6 +19,7 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.MissingValueException
 import nextflow.extension.ChannelFactory
 /**
@@ -64,14 +65,8 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         this.variableNames = getVarNames0()
     }
 
-    @Deprecated
-    WorkflowDef(BaseScript owner, BodyDef body, String name=null, List<String> inputs = Collections.emptyList() ) {
-        this.owner = owner
-        this.body = body
-        this.name = name
-        this.declaredInputs = inputs
-        this.variableNames = getVarNames0()
-    }
+    /* ONLY FOR TESTING PURPOSE */
+    protected WorkflowDef() {}
 
     WorkflowDef clone() {
         final copy = (WorkflowDef)super.clone()
@@ -98,7 +93,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     @PackageScope List<String> getDeclaredInputs() { declaredInputs }
 
     @PackageScope List<String> getDeclaredOutputs() { declaredOutputs }
-
 
     @PackageScope String getSource() { body.source }
 
@@ -131,14 +125,14 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     }
 
     protected ChannelOut collectOutputs(List<String> emissions) {
-        final channels = new ArrayList(emissions.size())
+        final channels = new LinkedHashMap<String, ?>(emissions.size())
         for( String name : emissions ) {
             if( !binding.hasVariable(name) )
                 throw new MissingValueException("Missing workflow output parameter: $name")
             final obj = binding.getVariable(name)
 
             if( ChannelFactory.isChannel(obj) ) {
-                channels.add(obj)
+                channels.put(name, (DataflowWriteChannel)obj)
             }
 
             else if( obj instanceof ChannelOut ) {
@@ -146,13 +140,13 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
                     throw new IllegalArgumentException("Cannot emit a multi-channel output: $name")
                 if( obj.size()==0 )
                     throw new MissingValueException("Cannot emit empty output: $name")
-                channels.add(obj.get(0))
+                channels.put(name, obj.get(0))
             }
 
             else {
                 final value = ChannelFactory.create(true)
                 value.bind(obj)
-                channels.add(value)
+                channels.put(name, value)
             }
         }
         return new ChannelOut(channels)
