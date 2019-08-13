@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
- * Models an abstarct module component i.e. functions, processes
+ * Models an abstract module component i.e. functions, processes
  * or (sub)workflow
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
