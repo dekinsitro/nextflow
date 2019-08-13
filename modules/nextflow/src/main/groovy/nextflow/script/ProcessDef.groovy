@@ -96,7 +96,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
     }
 
     @Override
-    ProcessDef withName(String name) {
+    ProcessDef cloneWithName(String name) {
         def result = clone()
         result.@name = name
         return result

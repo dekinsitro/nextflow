@@ -67,34 +67,4 @@ class ExecutionStackTest extends Specification {
 
     }
 
-    def 'should_validate_scope_prefix' ()  {
-        given:
-        def s1 = Mock(BaseScript)
-        def s2 = Mock(WorkflowDef); s2.name >> null
-        def s3 = Mock(WorkflowDef); s3.name >> 'foo'
-        def s4 = Mock(WorkflowDef); s4.name >> 'bar'
-        def s5 = Mock(WorkflowDef); s5.name >> 'baz'
-
-        when:
-        ExecutionStack.push(s1)
-        ExecutionStack.push(s2)
-        then:
-        ExecutionStack.scopePrefix == null
-
-        when:
-        ExecutionStack.push(s3)
-        then:
-        ExecutionStack.scopePrefix == 'foo:'
-
-        when:
-        ExecutionStack.push(s4)
-        then:
-        ExecutionStack.scopePrefix == 'foo:bar:'
-
-        when:
-        ExecutionStack.push(s5)
-        then:
-        ExecutionStack.scopePrefix == 'foo:bar:baz:'
-    }
-
 }

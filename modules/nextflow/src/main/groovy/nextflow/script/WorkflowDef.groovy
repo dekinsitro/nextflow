@@ -74,7 +74,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         return copy
     }
 
-    WorkflowDef withName(String name) {
+    WorkflowDef cloneWithName(String name) {
         def result = clone()
         result.@name = name
         return result

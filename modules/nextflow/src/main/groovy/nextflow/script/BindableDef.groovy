@@ -17,6 +17,7 @@
 package nextflow.script
 
 import groovy.transform.CompileStatic
+import nextflow.exception.DuplicateBindableInvocation
 
 /**
  *  Abstract module component which bind itself in the
@@ -27,19 +28,33 @@ import groovy.transform.CompileStatic
 @CompileStatic
 abstract class BindableDef extends ComponentDef {
 
+    static final public String SCOPE_SEP = ':'
+
+    private Set<String> invocations = new HashSet<>()
+
     abstract Object run(Object[] args)
 
     Object invoke_a(Object[] args) {
+
         // use this instance an workflow template, therefore clone it
-        final String prefix = this instanceof ProcessDef ? ExecutionStack.scopePrefix : null
-        final comp = (prefix ? this.withName(prefix+name) : this.clone()) as BindableDef
+        final String prefix = ExecutionStack.workflow()?.name
+        final fqName = prefix ? prefix+SCOPE_SEP+name : name
+        if( !invocations.add(fqName) ) {
+            final msg = "${type.capitalize()} $name has been already used -- If you need to reuse the same component include it with a different name or include in a different workflow context"
+            throw new DuplicateBindableInvocation(msg)
+        }
+
+        final comp = (prefix ? this.cloneWithName(fqName) : this.clone()) as BindableDef
         // invoke the process execution
         final result = comp.run(args)
+
         // register this component invocation in the current context
         // so that it can be accessed in the outer execution scope
+        // note the simple name (ie. not the one fully qualified with scope prefix) is used here
+        // because the component object is associated in the nested scope
         if( name ) {
-            final scope = ExecutionStack.binding()
-            scope.setVariable(name, comp)
+            final binding = ExecutionStack.binding()
+            binding.setVariable(this.name, comp)
         }
         return result
     }

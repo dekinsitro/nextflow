@@ -36,7 +36,7 @@ class CompositeDef extends ComponentDef implements ChainableDef {
 
     String getType() { 'composite' }
 
-    CompositeDef withName(String name) {
+    CompositeDef cloneWithName(String name) {
         throw new UnsupportedOperationException()
     }
 

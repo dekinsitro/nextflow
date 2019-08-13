@@ -266,7 +266,7 @@ class WorkflowDefTest extends Specification {
         def work = new WorkflowDef(name:'woo', body: new BodyDef({}, 'source'))
 
         when:
-        def copy = work.withName('bar')
+        def copy = work.cloneWithName('bar')
         then:
         copy.getName() == 'bar'
     }

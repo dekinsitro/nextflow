@@ -30,8 +30,6 @@ import nextflow.Session
 @CompileStatic
 class ExecutionStack {
 
-    static final String SCOPE_SEP = ':'
-
     static private List<ExecutionContext> stack = new ArrayList<>()
 
     static ExecutionContext current() {
@@ -68,21 +66,8 @@ class ExecutionStack {
     }
 
     static WorkflowDef workflow() {
-        def c = current()
-        if( c instanceof WorkflowDef )
-            return (WorkflowDef)c
-        throw new IllegalStateException("Not in workflow scope: [${c.getClass().getName()}] $this")
-    }
-
-    static String getScopePrefix() {
-
-        final result = new ArrayList(5)
-        for( ExecutionContext e : stack ) {
-            if( e instanceof WorkflowDef && e.name ) {
-                result.add(0, e.name)
-            }
-        }
-        return result ? result.join(SCOPE_SEP) + SCOPE_SEP : null
+        final ctx = current()
+        ctx instanceof WorkflowDef ? ctx : null
     }
 
     static void push(ExecutionContext script) {

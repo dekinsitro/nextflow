@@ -128,7 +128,7 @@ class ScriptMetaTest extends Specification {
         then:
         1 * comp1.getName() >> 'foo'
         1 * meta.getComponent('bar') >> null
-        1 * comp1.withName('bar') >> comp2
+        1 * comp1.cloneWithName('bar') >> comp2
         meta.@imports.get('bar') == comp2
 
     }
