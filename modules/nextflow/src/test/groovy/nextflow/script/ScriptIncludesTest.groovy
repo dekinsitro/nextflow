@@ -691,4 +691,58 @@ class ScriptIncludesTest extends Specification {
         result[0].val == 'HELLO'
         result[1].val == 'WORLD'
     }
+
+
+    def 'should allow multiple use of the same process' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+            process producer {
+                output: stdout()
+                shell: "echo Hello"
+            }
+            
+            process consumer {
+                input: file "foo"
+                output: stdout()
+                shell:
+                "rev foo"
+            }
+            
+            process another_consumer {
+                input: file "foo"
+                output: stdout()
+                shell: "wc -w foo"
+            }
+            
+            workflow flow1 {
+                producer | consumer | view
+            }
+            
+            workflow flow2 {
+                producer | another_consumer | view
+            }
+            '''.stripIndent()
+
+        SCRIPT.text = """
+            include "$MODULE" 
+  
+            workflow { 
+              flow1()
+              flow2()
+            }
+
+            """
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+       true
+
+    }
 }

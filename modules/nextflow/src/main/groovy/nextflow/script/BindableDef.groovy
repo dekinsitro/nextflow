@@ -31,7 +31,8 @@ abstract class BindableDef extends ComponentDef {
 
     Object invoke_a(Object[] args) {
         // use this instance an workflow template, therefore clone it
-        final comp = (BindableDef)this.clone()
+        final String prefix = this instanceof ProcessDef ? ExecutionStack.scopePrefix : null
+        final comp = (prefix ? this.withName(prefix+name) : this.clone()) as BindableDef
         // invoke the process execution
         final result = comp.run(args)
         // register this component invocation in the current context

@@ -1,13 +1,16 @@
 package nextflow.script
 
+
 import nextflow.NextflowMeta
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.MockScriptRunner
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class ScriptDslTest extends Specification {
 
     def setupSpec() { NextflowMeta.instance.enableDsl2() }
